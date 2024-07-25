@@ -6,8 +6,6 @@ EXTRA_PKGS="\
 	kmod-usb-serial-ftdi \
 	kmod-usb-serial-option \
 	kmod-usb-serial-pl2303 \
-	luci \
-	luci-proto-qmi \
 	picocom gl-puli-mcu \
 	qmi-utils \
 "
