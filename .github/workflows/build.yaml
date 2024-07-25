@@ -1,0 +1,161 @@
+name: Build package
+on: [ push, pull_request]
+jobs:
+  build-meta:
+    name: build-meta
+    runs-on: ubuntu-24.04
+    outputs:
+      build-meta-output: >-
+        ${{ steps.build-metadata.outputs.build-meta-output }}
+      firmware-version: >-
+        ${{ steps.build-metadata.outputs.firmware-version }}
+      create-release: >-
+        ${{ steps.build-metadata.outputs.create-release }}
+      sdk-name:
+        ${{ steps.build-metadata.outputs.sdk-name }}
+      sdk-url:
+        ${{ steps.build-metadata.outputs.sdk-url }}
+      imagebuilder-name:
+        ${{ steps.build-metadata.outputs.imagebuilder-name }}
+      imagebuilder-url:
+        ${{ steps.build-metadata.outputs.imagebuilder-url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+          fetch-depth: 0
+      - name: Determine Version
+        id: build-metadata
+        run: bash $GITHUB_WORKSPACE/contrib/get-version.sh
+      - name: Create Artifact of build-meta
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-meta
+          path: ${{ steps.build-metadata.outputs.build-meta-output }}
+  build-packages:
+    name: build-packages
+    runs-on: ubuntu-24.04
+    needs: build-meta
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+          fetch-depth: 0
+          submodules: true
+      - name: Install dependencies
+        run: |
+          $GITHUB_WORKSPACE/contrib/install-deps.sh
+      - name: Download SDK
+        run: |
+          curl -o /tmp/openwrt-sdk.tar.xz ${{ needs.build-meta.outputs.sdk-url }}
+      - name: Extract SDK
+        run: |
+          tar -xf /tmp/openwrt-sdk.tar.xz -C /tmp
+          ls /tmp
+          mv /tmp/${{ needs.build-meta.outputs.sdk-name }} /tmp/openwrt-sdk
+      - name: Create feeds.conf
+        run: |
+          cp /tmp/openwrt-sdk/feeds.conf.default /tmp/openwrt-sdk/feeds.conf
+          echo "src-link oobfw $GITHUB_WORKSPACE/openwrt" >> /tmp/openwrt-sdk/feeds.conf
+          echo "src-link oobpkgs $GITHUB_WORKSPACE/packages" >> /tmp/openwrt-sdk/feeds.conf
+          cat /tmp/openwrt-sdk/feeds.conf
+      - name: Init SDK
+        run: |
+          cd /tmp/openwrt-sdk
+          echo "# CONFIG_SIGNED_PACKAGES is not set" > /tmp/openwrt-sdk/.config
+          echo CONFIG_FFDA_OOB_FIRMWARE_VERSION=\"${{ needs.build-meta.outputs.firmware-version }}0\" >> /tmp/openwrt-sdk/.config
+          make defconfig
+          cat .config
+          cd /tmp/openwrt-sdk
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+      - name: Build packages
+        run: |
+          cd /tmp/openwrt-sdk
+          cat .config
+          make package/ffda-oob-firmware/compile V=s -j4
+          make package/index
+      - name: Show binary output directory structure
+        run: |
+          tree /tmp/openwrt-sdk/bin
+      - name: Upload oobfw packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-oobfw
+          path: /tmp/openwrt-sdk/bin/packages/mips_24kc/oobfw
+      - name: Upload oobpkgs packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-oobpkgs
+          path: /tmp/openwrt-sdk/bin/packages/mips_24kc/oobpkgs
+  build-firmware:
+    name: build-firmware
+    runs-on: ubuntu-24.04
+    needs: [build-packages, build-meta]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/packages
+      - name: Show binary output directory structure
+        run: |
+          tree /tmp/packages
+      - name: Install dependencies
+        run: |
+            $GITHUB_WORKSPACE/contrib/install-deps.sh
+      - name: Download Imagebuilder
+        run: |
+          curl -o /tmp/openwrt-imagebuilder.tar.xz ${{ needs.build-meta.outputs.imagebuilder-url }}
+      - name: Extract Imagebuilder
+        run: |
+          tar -xf /tmp/openwrt-imagebuilder.tar.xz -C /tmp
+          mv /tmp/${{ needs.build-meta.outputs.imagebuilder-name }} /tmp/openwrt-imagebuilder
+      - name: Link repositories
+        run: |
+          sed -i '/^option check_signature/d' /tmp/openwrt-imagebuilder/repositories.conf
+          echo "src oobfw file:///tmp/packages/packages-oobfw" >> /tmp/openwrt-imagebuilder/repositories.conf
+          echo "src oobpkgs file:///tmp/packages/packages-oobpkgs" >> /tmp/openwrt-imagebuilder/repositories.conf
+          cat /tmp/openwrt-imagebuilder/repositories.conf
+      - name: Build images
+        run: |
+          cd /tmp/openwrt-imagebuilder
+          $GITHUB_WORKSPACE/contrib/build-image.sh
+      - name: Upload firmware images
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-images
+          path: /tmp/openwrt-imagebuilder/bin/targets/ath79/nand
+  create-release:
+    name: create-release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    needs: [build-packages, build-firmware, build-meta]
+    if: ${{ needs.build-meta.outputs.create-release == '1' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/artifacts
+      - name: Show binary output directory structure
+        run: |
+          tree /tmp/artifacts
+      - name:
+        run: |
+          mkdir -p /tmp/artifacts-upload
+          cp /tmp/artifacts/firmware-images/*.bin /tmp/artifacts-upload
+          cp /tmp/artifacts/firmware-images/*.img /tmp/artifacts-upload
+          cp /tmp/artifacts/packages-oobfw/*.ipk /tmp/artifacts-upload
+          cp /tmp/artifacts/packages-oobpkgs/*.ipk /tmp/artifacts-upload
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body: ${{ github.ref_name }}
+          files: |
+            /tmp/artifacts-upload/*
