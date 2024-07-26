@@ -1,0 +1,6 @@
+config core 'core'
+	option enabled '1'
+	option host '10.66.225.69'
+	option log_level '3'
+	option interval '300'
+	option reporter_id '3'

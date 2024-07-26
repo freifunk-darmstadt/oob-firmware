@@ -1,0 +1,39 @@
+
+config interface 'loopback'
+	option device 'lo'
+	option proto 'static'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
+
+config device
+	option name 'br-lan'
+	option type 'bridge'
+	list ports 'eth0.1'
+
+config switch
+	option name 'switch0'
+	option reset '1'
+	option enable_vlan '1'
+
+config switch_vlan
+	option device 'switch0'
+	option vlan '1'
+	option ports '4 0t'
+
+config interface 'wwan'
+	option proto 'qmi'
+	option device '/dev/cdc-wdm0'
+	option apn 'internet'
+	option auth 'none'
+	option pdptype 'ipv4'
+	option mcc '262'
+	option mnc '1'
+
+config interface 'wan'
+	option device 'eth1'
+	option proto 'none'
+
+config interface 'lan'
+	option device 'eth0.1'
+	option proto 'none'
+
