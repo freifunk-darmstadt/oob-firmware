@@ -34,6 +34,9 @@ uci set system.@system[0].hostname="ffda-oob-$LABEL_MAC"
 # Copy banner
 cp /lib/ffda-oob-firmware/banner.txt /etc/banner
 
+# Replace %VERSION% in banner with current version
+sed -i "s/%VERSION%/$(cat /lib/ffda-oob-firmware/firmware-version)/" /etc/banner
+
 # Mark device as configured
 touch /lib/ffda-oob-firmware/configured
 
