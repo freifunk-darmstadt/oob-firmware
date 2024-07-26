@@ -1,5 +1,16 @@
 #!/bin/bash
 
+REMOVE_PKGS="\
+	-dnsmasq \
+	-odhcpd-ipv6only \
+	-odhcp6c \
+	-ppp \
+	-ppp-mod-pppoe \
+	-uboot-envtools \
+	-wpad-basic-mbedtls \
+"
+
+
 EXTRA_PKGS="\
 	ffda-oob-firmware \
 	kmod-usb-serial-cp210x \
@@ -8,6 +19,7 @@ EXTRA_PKGS="\
 	kmod-usb-serial-pl2303 \
 	picocom gl-puli-mcu \
 	qmi-utils \
+	wpad-mbedtls \
 "
 
-make image PROFILE="glinet_gl-xe300" PACKAGES="$EXTRA_PKGS"
+make image PROFILE="glinet_gl-xe300" PACKAGES="$REMOVE_PKGS $EXTRA_PKGS"
