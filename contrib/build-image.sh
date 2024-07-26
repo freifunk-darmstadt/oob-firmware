@@ -12,6 +12,7 @@ REMOVE_PKGS="\
 
 
 EXTRA_PKGS="\
+	clocate \
 	ffda-oob-firmware \
 	kmod-usb-serial-cp210x \
 	kmod-usb-serial-ftdi \
