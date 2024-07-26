@@ -11,9 +11,28 @@ fi
 # Copy th default configuration files
 cp /lib/ffda-oob-firmware/conffiles/config/* /etc/config/
 
-# ToDo: Randomize host-id for state-reporter
+# Get label-mac
+LABEL_MAC="$(/lib/ffda-oob-firmware/label-mac.sh)"
 
-# ToDo: Set hostname to "ffda-oob-<host-id>"
+# Hash label-mac
+LABEL_MAC_HASH="$(echo $LABEL_MAC | sha256sum | cut -c1-8)"
+
+# Convert to decimal
+HOST_ID="$(printf "%d" 0x$LABEL_MAC_HASH)"
+
+# Host ID is 1024 - 65000
+HOST_ID="$((HOST_ID + 1024))"
+HOST_ID="$((HOST_ID % 65000))"
+
+# Set Host-ID as reporter_id
+uci set ffda-oob-state-reporter.core.reporter_id="$HOST_ID"
+uci commit ffda-oob-state-reporter
+
+# Set default hostname
+uci set system.@system[0].hostname="ffda-oob-$LABEL_MAC"
+
+# Copy banner
+cp /lib/ffda-oob-firmware/banner.txt /etc/banner
 
 # Mark device as configured
 touch /lib/ffda-oob-firmware/configured
