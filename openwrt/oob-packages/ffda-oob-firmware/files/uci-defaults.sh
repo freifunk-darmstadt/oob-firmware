@@ -37,6 +37,9 @@ cp /lib/ffda-oob-firmware/banner.txt /etc/banner
 # Replace %VERSION% in banner with current version
 sed -i "s/%VERSION%/$(cat /lib/ffda-oob-firmware/firmware-version)/" /etc/banner
 
+# Add reboot-cronjob after 24 hours
+echo "0 */24 * * *	/sbin/reboot" > /etc/crontabs/root
+
 # Mark device as configured
 touch /lib/ffda-oob-firmware/configured
 
