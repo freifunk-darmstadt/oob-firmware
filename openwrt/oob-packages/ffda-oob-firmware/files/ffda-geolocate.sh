@@ -9,5 +9,5 @@ fi
 
 # Get the current location
 ip link set dev wlan0 up
-clocate -p google -k AIzaSyA6ox6kpT0PXoxepY77xudrhJ9Y9W5Birc
+clocate -p google -k "$API_KEY"
 ip link set dev wlan0 down
