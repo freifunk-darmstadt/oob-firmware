@@ -14,6 +14,9 @@ cp /lib/ffda-oob-firmware/conffiles/config/* /etc/config/
 # Get label-mac
 LABEL_MAC="$(/lib/ffda-oob-firmware/label-mac.sh)"
 
+# Remove colons
+LABEL_MAC_NO_COLONS="$(echo $LABEL_MAC | tr -d ':')"
+
 # Hash label-mac
 LABEL_MAC_HASH="$(echo $LABEL_MAC | sha256sum | cut -c1-8)"
 
@@ -29,7 +32,7 @@ uci set ffda-oob-state-reporter.core.reporter_id="$HOST_ID"
 uci commit ffda-oob-state-reporter
 
 # Set default hostname
-uci set system.@system[0].hostname="ffda-oob-$LABEL_MAC"
+uci set system.@system[0].hostname="ffda-oob-$LABEL_MAC_NO_COLONS"
 
 # Copy banner
 cp /lib/ffda-oob-firmware/banner.txt /etc/banner
