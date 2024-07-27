@@ -1,5 +1,8 @@
 #!/bin/sh
 
+PREVIOUS_FIRMWARE_VERSION="$(cat /lib/ffda-oob-firmware/configured)"
+CURRENT_FIRMWARE_VERSION="$(cat /lib/ffda-oob-firmware/firmware-version)"
+
 # Always overwrite authorized_keys
 cp /lib/ffda-oob-firmware/conffiles/authorized_keys /etc/dropbear/authorized_keys
 
@@ -38,7 +41,7 @@ uci set system.@system[0].hostname="ffda-oob-$LABEL_MAC_NO_COLONS"
 cp /lib/ffda-oob-firmware/banner.txt /etc/banner
 
 # Replace %VERSION% in banner with current version
-sed -i "s/%VERSION%/$(cat /lib/ffda-oob-firmware/firmware-version)/" /etc/banner
+sed -i "s/%VERSION%/${CURRENT_FIRMWARE_VERSION}/" /etc/banner
 
 # Add reboot-cronjob after 24 hours
 echo "0 */24 * * *	/sbin/reboot" > /etc/crontabs/root
@@ -47,6 +50,6 @@ echo "0 */24 * * *	/sbin/reboot" > /etc/crontabs/root
 passwd -l root
 
 # Mark device as configured
-touch /lib/ffda-oob-firmware/configured
+echo "$CURRENT_FIRMWARE_VERSION" > /lib/ffda-oob-firmware/configured
 
 exit 0
