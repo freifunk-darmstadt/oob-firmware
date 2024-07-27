@@ -5,11 +5,6 @@ config interface 'loopback'
 	option ipaddr '127.0.0.1'
 	option netmask '255.0.0.0'
 
-config device
-	option name 'br-lan'
-	option type 'bridge'
-	list ports 'eth0.1'
-
 config switch
 	option name 'switch0'
 	option reset '1'
