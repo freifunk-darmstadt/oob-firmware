@@ -118,6 +118,10 @@ jobs:
           echo "src oobfw file:///tmp/packages/packages-oobfw" >> /tmp/openwrt-imagebuilder/repositories.conf
           echo "src oobpkgs file:///tmp/packages/packages-oobpkgs" >> /tmp/openwrt-imagebuilder/repositories.conf
           cat /tmp/openwrt-imagebuilder/repositories.conf
+      - name: Set Version information
+        run: |
+          sed -i "s/^CONFIG_VERSION_NUMBER.*/CONFIG_VERSION_NUMBER=\"${{ needs.build-meta.outputs.firmware-version }}\"/g" /tmp/openwrt-imagebuilder/.config
+          sed -i "s/^CONFIG_VERSION_DIST.*/CONFIG_VERSION_DIST=\"ffda-oob\"/g" /tmp/openwrt-imagebuilder/.config
       - name: Build images
         run: |
           cd /tmp/openwrt-imagebuilder
