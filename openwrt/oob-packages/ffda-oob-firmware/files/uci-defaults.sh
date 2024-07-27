@@ -2,13 +2,29 @@
 
 PREVIOUS_FIRMWARE_VERSION="$(cat /lib/ffda-oob-firmware/configured)"
 CURRENT_FIRMWARE_VERSION="$(cat /lib/ffda-oob-firmware/firmware-version)"
+FIRSTBOOT="1"
 
 # Always overwrite authorized_keys
 cp /lib/ffda-oob-firmware/conffiles/authorized_keys /etc/dropbear/authorized_keys
 
+# Copy banner
+cp /lib/ffda-oob-firmware/banner.txt /etc/banner
+
+# Replace %VERSION% in banner with current version
+sed -i "s/%VERSION%/${CURRENT_FIRMWARE_VERSION}/" /etc/banner
+
 # Check if /lib/ffda-oob-firmware/configured exists
-if [ -f /lib/ffda-oob-firmware/configured ]; then
-    exit 0
+if [ -f "/lib/ffda-oob-firmware/configured" ]; then
+	echo "Device has already been configured."
+	FIRSTBOOT="0"
+fi
+
+# Mark device as configured
+echo "$CURRENT_FIRMWARE_VERSION" > /lib/ffda-oob-firmware/configured
+
+# Check if this is the first boot
+if [ "$FIRSTBOOT" -eq "0" ]; then
+	exit 1
 fi
 
 # Copy th default configuration files
@@ -37,19 +53,10 @@ uci commit ffda-oob-state-reporter
 # Set default hostname
 uci set system.@system[0].hostname="ffda-oob-$LABEL_MAC_NO_COLONS"
 
-# Copy banner
-cp /lib/ffda-oob-firmware/banner.txt /etc/banner
-
-# Replace %VERSION% in banner with current version
-sed -i "s/%VERSION%/${CURRENT_FIRMWARE_VERSION}/" /etc/banner
-
 # Add reboot-cronjob after 24 hours
 echo "0 */24 * * *	/sbin/reboot" > /etc/crontabs/root
 
 # Lock root-user account
 passwd -l root
-
-# Mark device as configured
-echo "$CURRENT_FIRMWARE_VERSION" > /lib/ffda-oob-firmware/configured
 
 exit 0
