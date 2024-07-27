@@ -67,7 +67,7 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           echo "# CONFIG_SIGNED_PACKAGES is not set" > /tmp/openwrt-sdk/.config
-          echo CONFIG_FFDA_OOB_FIRMWARE_VERSION=\"${{ needs.build-meta.outputs.firmware-version }}0\" >> /tmp/openwrt-sdk/.config
+          echo CONFIG_FFDA_OOB_FIRMWARE_VERSION=\"${{ needs.build-meta.outputs.firmware-version }}\" >> /tmp/openwrt-sdk/.config
           make defconfig
           cat .config
       - name: Build packages
