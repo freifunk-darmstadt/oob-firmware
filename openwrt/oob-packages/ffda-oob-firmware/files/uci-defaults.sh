@@ -40,6 +40,9 @@ sed -i "s/%VERSION%/$(cat /lib/ffda-oob-firmware/firmware-version)/" /etc/banner
 # Add reboot-cronjob after 24 hours
 echo "0 */24 * * *	/sbin/reboot" > /etc/crontabs/root
 
+# Lock root-user account
+passwd -l root
+
 # Mark device as configured
 touch /lib/ffda-oob-firmware/configured
 
