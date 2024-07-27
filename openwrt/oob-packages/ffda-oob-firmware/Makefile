@@ -47,6 +47,7 @@ define Package/ffda-oob-firmware/install
 	$(INSTALL_BIN) ./files/uci-defaults.sh $(1)/etc/uci-defaults/99_ffda-oob-firmware
 	$(INSTALL_BIN) ./files/label-mac.sh $(1)/lib/ffda-oob-firmware/
 	$(INSTALL_BIN) ./files/ffda-notes.sh $(1)/usr/bin/ffda-notes
+	$(INSTALL_BIN) ./files/ffda-geolocate.sh $(1)/usr/bin/ffda-geolocate
 
 	$(CP) ./files/authorized_keys $(1)/lib/ffda-oob-firmware/conffiles/authorized_keys
 	$(CP) ./files/config/* $(1)/lib/ffda-oob-firmware/conffiles/config/

@@ -1,0 +1,3 @@
+
+config geolocator 'geolocator'
+	option api_key 'GEOLOCATOR_API_KEY'
