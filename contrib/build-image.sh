@@ -20,6 +20,7 @@ EXTRA_PKGS="\
 	kmod-usb-serial-pl2303 \
 	picocom gl-puli-mcu \
 	qmi-utils \
+	telnet-bsd \
 	wpad-mbedtls \
 "
 
