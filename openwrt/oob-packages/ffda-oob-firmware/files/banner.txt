@@ -19,4 +19,5 @@ Version: %VERSION%
 Commands:
 --> ffda-oob-ntp                      - Synchronize time via NTP
 --> ffda-notes [show | edit | nano]   - Show notes
+--> ffda-geolocate                    - Get geolocation information
 =====================================================================
