@@ -2,4 +2,5 @@
 
 ntpd -n -q -p time.windows.com || exit 1
 
-date "+%s" > /tmp/ntp_last_sync
+mkdir -p /tmp/ffda-oob-firmware
+date "+%s" > /tmp/ffda-oob-firmware/ntp_last_sync
