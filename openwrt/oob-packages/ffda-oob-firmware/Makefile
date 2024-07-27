@@ -17,6 +17,8 @@ define Build/Compile
 endef
 
 define Package/ffda-oob-firmware
+  SECTION:=utils
+  CATEGORY:=Utilities
   TITLE:=Base files of FFDA OOB Firmware
   DEPENDS:=+ffda-oob-state-reporter
 endef
@@ -28,7 +30,7 @@ endef
 
 define Package/ffda-oob-firmware/config
 config FFDA_OOB_FIRMWARE_VERSION
-	string "Gluon version number"
+	string "OOB version number"
 	depends on PACKAGE_ffda-oob-firmware
 	default ""
 endef
