@@ -45,6 +45,11 @@ jobs:
     name: build-packages
     runs-on: ubuntu-24.04
     needs: build-meta
+    outputs:
+      usign-public-key:
+        ${{ steps.build-keypair.outputs.usign-public-key }}
+      usign-fingerprint:
+        ${{ steps.build-keypair.outputs.usign-fingerprint }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -94,17 +99,26 @@ jobs:
         with:
           path: /tmp/openwrt-sdk
           key: ${{ steps.cache-key-sdk.outputs.cache-key }}
+      - name: Get build keypair
+        id: build-keypair
+        env:
+          GHA_PRIVATE_KEY: ${{ secrets.USIGN_PRIVATE_KEY }}
+          GHA_PUBLIC_KEY: ${{ vars.USIGN_PUBLIC_KEY }}
+        run: |
+          bash $GITHUB_WORKSPACE/contrib/build-key.sh /tmp/openwrt-sdk/staging_dir/host/bin/usign
+      - name: Save secret build-key
+        run: |
+          echo "${{ steps.build-keypair.outputs.usign-private-key }}" > /tmp/openwrt-sdk/key-build
       - name: Create SDK configuration
         run: |
-          cd /tmp/openwrt-sdk
-          echo "# CONFIG_SIGNED_PACKAGES is not set" > /tmp/openwrt-sdk/.config
           echo CONFIG_FFDA_OOB_FIRMWARE_VERSION=\"${{ needs.build-meta.outputs.firmware-version }}\" >> /tmp/openwrt-sdk/.config
-          make defconfig
+          make -C /tmp/openwrt-sdk defconfig
       - name: Build packages
         run: |
-          cd /tmp/openwrt-sdk
-          make package/ffda-oob-firmware/compile V=s -j4
-          make package/index
+          make -C /tmp/openwrt-sdk package/ffda-oob-firmware/compile V=s -j4
+      - name: Generate package index
+        run: |
+          make -C /tmp/openwrt-sdk package/index V=s
       - name: Show binary output directory structure
         run: |
           tree /tmp/openwrt-sdk/bin
@@ -144,7 +158,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: /tmp/openwrt-imagebuilder
-          key: ${{ steps.cache-key-ib.outputs.cache-key }}    
+          key: ${{ steps.cache-key-ib.outputs.cache-key }}
       - name: Download Imagebuilder
         if: steps.restore-cache-ib.outputs.cache-hit != 'true'
         run: |
@@ -161,9 +175,11 @@ jobs:
         with:
           path: /tmp/openwrt-imagebuilder
           key: ${{ steps.cache-key-ib.outputs.cache-key }}
+      - name: Save public build-key
+        run: |
+          echo "${{ needs.build-packages.outputs.usign-public-key }}" > /tmp/openwrt-imagebuilder/keys/${{ needs.build-packages.outputs.usign-fingerprint }}
       - name: Link repositories
         run: |
-          sed -i '/^option check_signature/d' /tmp/openwrt-imagebuilder/repositories.conf
           echo "src oobfw file:///tmp/packages/packages-oobfw" >> /tmp/openwrt-imagebuilder/repositories.conf
           echo "src oobpkgs file:///tmp/packages/packages-oobpkgs" >> /tmp/openwrt-imagebuilder/repositories.conf
       - name: Set Version information
