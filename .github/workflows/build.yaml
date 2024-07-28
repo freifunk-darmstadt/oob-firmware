@@ -19,15 +19,23 @@ jobs:
         ${{ steps.build-metadata.outputs.imagebuilder-name }}
       imagebuilder-url:
         ${{ steps.build-metadata.outputs.imagebuilder-url }}
+      cache-key:
+        ${{ steps.cache-key.outputs.cache-key }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-tags: true
           fetch-depth: 0
+          submodules: true
       - name: Determine Version
         id: build-metadata
         run: bash $GITHUB_WORKSPACE/contrib/get-version.sh
+      - name: Determine Cache-Key
+        id: cache-key
+        run: >
+          echo "cache-key=$(bash $GITHUB_WORKSPACE/contrib/cache-key.sh
+          $GITHUB_WORKSPACE ${{ steps.build-metadata.outputs.sdk-url }})" >> "$GITHUB_OUTPUT"
       - name: Create Artifact of build-meta
         uses: actions/upload-artifact@v4
         with:
@@ -47,24 +55,48 @@ jobs:
       - name: Install dependencies
         run: |
           $GITHUB_WORKSPACE/contrib/install-deps.sh
+      - name: Determine Cache-Key
+        id: cache-key-sdk
+        run: >
+          echo "cache-key=sdk-${{ needs.build-meta.outputs.cache-key }}" >> "$GITHUB_OUTPUT"
+      - name: Restore Cache
+        id: restore-cache-sdk
+        uses: actions/cache/restore@v4
+        with:
+          path: /tmp/openwrt-sdk
+          key: ${{ steps.cache-key-sdk.outputs.cache-key }}
       - name: Download SDK
+        if: steps.restore-cache-sdk.outputs.cache-hit != 'true'
         run: |
           curl -o /tmp/openwrt-sdk.tar.xz ${{ needs.build-meta.outputs.sdk-url }}
       - name: Extract SDK
+        if : steps.restore-cache-sdk.outputs.cache-hit != 'true'
         run: |
           tar -xf /tmp/openwrt-sdk.tar.xz -C /tmp
           ls /tmp
           mv /tmp/${{ needs.build-meta.outputs.sdk-name }} /tmp/openwrt-sdk
       - name: Create feeds.conf
+        if: steps.restore-cache-sdk.outputs.cache-hit != 'true'
         run: |
           cp /tmp/openwrt-sdk/feeds.conf.default /tmp/openwrt-sdk/feeds.conf
           echo "src-link oobfw $GITHUB_WORKSPACE/openwrt" >> /tmp/openwrt-sdk/feeds.conf
           echo "src-link oobpkgs $GITHUB_WORKSPACE/packages" >> /tmp/openwrt-sdk/feeds.conf
-      - name: Init SDK
+      - name: Install SDK feeds
+        if: steps.restore-cache-sdk.outputs.cache-hit != 'true'
         run: |
           cd /tmp/openwrt-sdk
           ./scripts/feeds update -a
           ./scripts/feeds install -a
+      - name: Save cache
+        id: save-cache-sdk
+        if: steps.restore-cache-sdk.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/openwrt-sdk
+          key: ${{ steps.cache-key-sdk.outputs.cache-key }}
+      - name: Create SDK configuration
+        run: |
+          cd /tmp/openwrt-sdk
           echo "# CONFIG_SIGNED_PACKAGES is not set" > /tmp/openwrt-sdk/.config
           echo CONFIG_FFDA_OOB_FIRMWARE_VERSION=\"${{ needs.build-meta.outputs.firmware-version }}\" >> /tmp/openwrt-sdk/.config
           make defconfig
@@ -100,16 +132,35 @@ jobs:
       - name: Show binary output directory structure
         run: |
           tree /tmp/packages
+      - name: Determine Cache-Key
+        id: cache-key-ib
+        run: >
+          echo "cache-key=ib-${{ needs.build-meta.outputs.cache-key }}" >> "$GITHUB_OUTPUT"
       - name: Install dependencies
         run: |
             $GITHUB_WORKSPACE/contrib/install-deps.sh
+      - name: Restore Cache
+        id: restore-cache-ib
+        uses: actions/cache/restore@v4
+        with:
+          path: /tmp/openwrt-imagebuilder
+          key: ${{ steps.cache-key-ib.outputs.cache-key }}    
       - name: Download Imagebuilder
+        if: steps.restore-cache-ib.outputs.cache-hit != 'true'
         run: |
           curl -o /tmp/openwrt-imagebuilder.tar.xz ${{ needs.build-meta.outputs.imagebuilder-url }}
       - name: Extract Imagebuilder
+        if: steps.restore-cache-ib.outputs.cache-hit != 'true'
         run: |
           tar -xf /tmp/openwrt-imagebuilder.tar.xz -C /tmp
           mv /tmp/${{ needs.build-meta.outputs.imagebuilder-name }} /tmp/openwrt-imagebuilder
+      - name: Save cache
+        if: steps.restore-cache-ib.outputs.cache-hit != 'true'
+        id: save-cache-ib
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/openwrt-imagebuilder
+          key: ${{ steps.cache-key-ib.outputs.cache-key }}
       - name: Link repositories
         run: |
           sed -i '/^option check_signature/d' /tmp/openwrt-imagebuilder/repositories.conf
