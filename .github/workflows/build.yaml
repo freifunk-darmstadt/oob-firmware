@@ -60,7 +60,6 @@ jobs:
           cp /tmp/openwrt-sdk/feeds.conf.default /tmp/openwrt-sdk/feeds.conf
           echo "src-link oobfw $GITHUB_WORKSPACE/openwrt" >> /tmp/openwrt-sdk/feeds.conf
           echo "src-link oobpkgs $GITHUB_WORKSPACE/packages" >> /tmp/openwrt-sdk/feeds.conf
-          cat /tmp/openwrt-sdk/feeds.conf
       - name: Init SDK
         run: |
           cd /tmp/openwrt-sdk
@@ -69,7 +68,6 @@ jobs:
           echo "# CONFIG_SIGNED_PACKAGES is not set" > /tmp/openwrt-sdk/.config
           echo CONFIG_FFDA_OOB_FIRMWARE_VERSION=\"${{ needs.build-meta.outputs.firmware-version }}\" >> /tmp/openwrt-sdk/.config
           make defconfig
-          cat .config
       - name: Build packages
         run: |
           cd /tmp/openwrt-sdk
@@ -117,7 +115,6 @@ jobs:
           sed -i '/^option check_signature/d' /tmp/openwrt-imagebuilder/repositories.conf
           echo "src oobfw file:///tmp/packages/packages-oobfw" >> /tmp/openwrt-imagebuilder/repositories.conf
           echo "src oobpkgs file:///tmp/packages/packages-oobpkgs" >> /tmp/openwrt-imagebuilder/repositories.conf
-          cat /tmp/openwrt-imagebuilder/repositories.conf
       - name: Set Version information
         run: |
           sed -i "s/^CONFIG_VERSION_NUMBER.*/CONFIG_VERSION_NUMBER=\"${{ needs.build-meta.outputs.firmware-version }}\"/g" /tmp/openwrt-imagebuilder/.config
